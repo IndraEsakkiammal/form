@@ -1,12 +1,12 @@
 import qrcode
 
-# Your Render-deployed URL (Replace with your actual Render URL)
-render_url = "https://flask-qrcode-app.onrender.com/?ngrok-skip-browser-warning=true"
+# ✅ Correct Render URL
+HOME_URL = "https://form-kufc.onrender.com/"
 
-# Generate QR code
-qr = qrcode.make(render_url)
+# Generate QR Code
+qr = qrcode.make(HOME_URL)
 
-# Save it as qrcode.png (consistent with app.py)
-qr.save("qrcode.png")
+# Save QR Code
+qr.save("customer_qr.png")
 
-print("✅ QR Code Generated Successfully! Saved as qrcode.png")
+print("✅ QR Code generated successfully! Scan it to open the form.")

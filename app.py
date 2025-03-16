@@ -1,61 +1,71 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, jsonify
 import mysql.connector
-import qrcode
 
 app = Flask(__name__)
 
-# MySQL Database Configuration
-db_config = {
-    "host": "localhost",  
-    "user": "root",       
-    "password": "1234",  
-    "database": "trolly"
-}
+# Database connection function
+def get_db_connection():
+    try:
+        db = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="1234",
+            database="trolly"
+        )
+        return db
+    except mysql.connector.Error as err:
+        print("❌ Database connection error:", err)
+        return None
 
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template('index.html')  # Loads registration form
 
-@app.route("/register", methods=["POST"])
+@app.route('/register', methods=['POST'])
 def register():
-    name = request.form["name"]
-    phone = request.form["phone"]
-    address = request.form["address"]
-    city = request.form["city"]
-    pincode = request.form["pincode"]
+    name = request.form.get('name')
+    phone = request.form.get('phone')
+    address = request.form.get('address')
+    city = request.form.get('city')
+    pincode = request.form.get('pincode')
+
+    if not all([name, phone, address, city, pincode]):
+        return jsonify({'status': 'error', 'message': 'Please fill all fields'})
+
+    db = get_db_connection()
+    if db is None:
+        return jsonify({'status': 'error', 'message': 'Database connection failed!'})
+
+    cursor = None  # ✅ Prevents UnboundLocalError
 
     try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
+        cursor = db.cursor()
 
         # Check if phone number already exists
         cursor.execute("SELECT * FROM Customer WHERE customer_phone = %s", (phone,))
         existing_customer = cursor.fetchone()
 
         if existing_customer:
-            return "<h1>⚠️ You are already registered. Thank You!</h1>"
+            return jsonify({'status': 'error', 'message': 'You are already registered!'})
 
-        # Insert new customer record
-        cursor.execute(
-            "INSERT INTO Customer (customer_name, customer_phone, customer_address, customer_city, customer_pincode) VALUES (%s, %s, %s, %s, %s)",
-            (name, phone, address, city, pincode)
-        )
-        conn.commit()
-        return "<h1>✅ Registration Successful!</h1>"
+        # Insert new customer
+        cursor.execute("""
+            INSERT INTO Customer (customer_name, customer_phone, customer_address, customer_city, customer_pincode)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (name, phone, address, city, pincode))
+        db.commit()
+
+        return jsonify({'status': 'success', 'message': 'Registration successful!'})
 
     except mysql.connector.Error as err:
-        return f"<h1>❌ Database Error: {err}</h1>"
-
+        print("❌ Database Error:", err)
+        return jsonify({'status': 'error', 'message': f'Database error: {err}'})
+    
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:  
+            cursor.close()
+        if db:
+            db.close()
 
-@app.route("/qrcode")
-def generate_qr():
-    url = "https://yourapp.onrender.com/?ngrok-skip-browser-warning=true"
-    qr = qrcode.make(url)
-    qr.save("qrcode.png")  # Save QR code in the same filename
-    return send_file("qrcode.png", mimetype="image/png")  # Serve the QR image dynamically
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)

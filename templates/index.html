@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Registration</title>
-    <script>
-        // Show alert message when the page is loaded (QR Code Scanned)
-        window.onload = function() {
-            alert("✅ Welcome! Please register.");
-        };
-    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,11 +45,31 @@
             background-color: #218838;
         }
     </style>
+    <script>
+        function submitForm(event) {
+            event.preventDefault(); // Prevent page reload
+            
+            let formData = new FormData(document.getElementById("registerForm"));
+
+            fetch("/register", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message); // Show alert
+                if (data.status === "success") {
+                    document.getElementById("registerForm").reset(); // Clear form
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
 </head>
 <body>
     <div class="container">
         <h2>Register Customer</h2>
-        <form action="/register" method="POST">
+        <form id="registerForm" onsubmit="submitForm(event)">
             <table>
                 <tr>
                     <td><label>Name:</label></td>
